@@ -75,17 +75,13 @@ npm --prefix frontend run build
 
 Documentación: [arquitectura](docs/architecture.md), [despliegue](docs/deployment.md), [guion de demo](docs/demo_script.md), [defensa](docs/defense.md), [rúbrica](docs/rubric_mapping.md).
 
-## Subir este proyecto a tu repositorio
+## Repositorio publicado
 
-La carpeta tiene su propio repositorio Git. `.env`, `.venv`, `node_modules`, bases de demo y compilaciones quedan excluidos.
-
-Desde esta carpeta, configura la URL de tu repositorio vacío y publica cuando lo decidas:
+Código: [ayanez6548/education-sales-hackathon](https://github.com/ayanez6548/education-sales-hackathon).
 
 ```powershell
-git add .
-git commit -m "Implement education sales hackathon MVP"
-git remote add origin URL_DE_TU_REPOSITORIO
-git push -u origin main
+git clone https://github.com/ayanez6548/education-sales-hackathon.git
+cd education-sales-hackathon
 ```
 
-Si ya existe un commit local, puedes omitir los dos primeros comandos.
+La carpeta contiene un repositorio Git independiente. `.env`, `.runtime`, `.venv`, `node_modules`, bases de datos y compilaciones quedan excluidos. Las verificaciones del backend y frontend se ejecutan también en GitHub Actions. Para actualizar una copia existente después de revisar tus cambios, usa `git pull`.
