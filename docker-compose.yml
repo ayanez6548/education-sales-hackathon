@@ -1,0 +1,88 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: education
+      POSTGRES_PASSWORD: education
+      POSTGRES_DB: education_sales
+    ports:
+      - "5432:5432"
+    volumes:
+      - education_sales_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U education -d education_sales"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://education:education@postgres:5432/education_sales
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: alembic upgrade head
+    working_dir: /app
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: demo
+      DEMO_MODE: "true"
+      EMBED_WORKER: "false"
+      DATABASE_URL: postgresql+psycopg://education:education@postgres:5432/education_sales
+      ALLOWED_ORIGINS: http://localhost:5173,http://localhost:8080
+      TELEGRAM_ADAPTER: demo
+      LLM_ADAPTER: demo
+      AUTH_ADAPTER: demo
+      JWT_SECRET: change-me-in-any-non-demo-environment
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=2)"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
+    working_dir: /app
+
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: demo
+      DEMO_MODE: "true"
+      DATABASE_URL: postgresql+psycopg://education:education@postgres:5432/education_sales
+      TELEGRAM_ADAPTER: demo
+      LLM_ADAPTER: demo
+      AUTH_ADAPTER: demo
+      JWT_SECRET: change-me-in-any-non-demo-environment
+    depends_on:
+      api:
+        condition: service_healthy
+    command: python -m app.worker
+    working_dir: /app
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8000
+        VITE_DEMO_MODE: "true"
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
+volumes:
+  education_sales_pg:
