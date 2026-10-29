@@ -80,4 +80,4 @@ def _seed_demo_operators(session: Session, settings: Settings) -> None:
         settings.demo_operator_b_password,
         "demo-operator-b",
     )
-    logger.warning("Seeded SIMULATED demo operators. Replace before any live jury environment.")
+    logger.info("Seeded configured operator profiles for local authentication")

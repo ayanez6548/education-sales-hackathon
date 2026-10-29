@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     database_url: str = Field(default_factory=default_sqlite_url)
     public_api_url: str = "http://localhost:8000"
+    static_directory: str = ""
+    register_telegram_webhook: bool = False
     allowed_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     jwt_secret: str = "change-me-in-any-non-demo-environment"
@@ -70,6 +72,14 @@ class Settings(BaseSettings):
 
     timezone_name: str = "America/Guayaquil"
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def normalize_database_url(cls, value: str) -> str:
+        for prefix in ("postgres://", "postgresql://"):
+            if value.startswith(prefix):
+                return "postgresql+psycopg://" + value[len(prefix):]
+        return value
+
     @property
     def allowed_origin_list(self) -> list[str]:
         return [item.strip() for item in self.allowed_origins.split(",") if item.strip()]
@@ -105,6 +115,23 @@ class Settings(BaseSettings):
             raise RuntimeError(f"Unknown LLM_ADAPTER={self.llm_adapter}")
         if self.auth_adapter not in known_auth:
             raise RuntimeError(f"Unknown AUTH_ADAPTER={self.auth_adapter}")
+
+        if self.app_env == "public_demo":
+            if self.demo_mode or self.use_demo_telegram or self.use_demo_llm:
+                raise RuntimeError("Public demo requires live Telegram and LLM adapters and DEMO_MODE=false")
+            if self.is_sqlite:
+                raise RuntimeError("Public demo requires PostgreSQL for persistent data")
+            if not self.public_api_url.startswith("https://"):
+                raise RuntimeError("Public demo requires an HTTPS PUBLIC_API_URL")
+            if self.auth_adapter == "demo":
+                passwords = (self.demo_operator_password, self.demo_operator_b_password)
+                if any(len(value) < 16 or value.startswith("demo-") for value in passwords):
+                    raise RuntimeError("Public demo operator passwords must be unique secrets of at least 16 characters")
+            if len(self.jwt_secret) < 32 or self.jwt_secret.startswith("change-me"):
+                raise RuntimeError("Public demo requires a random JWT_SECRET of at least 32 characters")
+
+        if self.job_lease_seconds <= self.llm_timeout_seconds + 5:
+            raise RuntimeError("JOB_LEASE_SECONDS must exceed LLM_TIMEOUT_SECONDS by more than five seconds")
 
         if self.is_production:
             if self.demo_mode:

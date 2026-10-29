@@ -14,6 +14,10 @@ Este repositorio no depende de otros proyectos. El código vive en `backend/`, `
 - Autenticación demo (JWT local) y ruta de integración Supabase (audiencia e issuer obligatorios).
 - Cola de trabajos en base de datos y trabajador (empotrado en demo o proceso aparte).
 
+## Demo pública sin depender del PC
+
+El despliegue está definido en `render.yaml` y el `Dockerfile` de la raíz: panel y API en un servicio HTTPS, PostgreSQL y Telegram real, con IA compatible con OpenAI configurada para Groq. Las claves se guardan como secretos de Render. Consulta [la guía de demo pública](docs/public_demo.md) para los pasos, las verificaciones y los límites del plan gratuito. La configuración preparada no significa que la demo ya esté publicada.
+
 ## Demo local sin Docker ni credenciales
 
 Ejecuta los pasos desde la raíz de esta carpeta. Usa una terminal separada para cada servidor.

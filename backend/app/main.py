@@ -14,6 +14,7 @@ from typing import Any
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -116,6 +117,8 @@ def create_app() -> FastAPI:
 
     app.include_router  # keep attribute for tests
     _register_routes(app)
+    if settings.static_directory:
+        app.mount("/", StaticFiles(directory=settings.static_directory, html=True), name="dashboard")
     return app
 
 
