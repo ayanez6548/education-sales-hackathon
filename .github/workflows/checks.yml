@@ -28,3 +28,24 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm run build
+  cloud-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build deployment image
+        run: docker build -t education-sales:ci .
+      - name: Start PostgreSQL and the cloud entrypoint
+        run: |
+          docker network create education-ci
+          docker run -d --name education-db --network education-ci --network-alias db -e POSTGRES_USER=test -e POSTGRES_PASSWORD=test -e POSTGRES_DB=education_sales postgres:16-alpine
+          for attempt in $(seq 1 30); do
+            if docker exec education-db pg_isready -U test -d education_sales; then break; fi
+            sleep 2
+          done
+          docker run -d --name education-api --network education-ci -p 10000:10000 -e APP_ENV=demo -e DEMO_MODE=false -e TELEGRAM_ADAPTER=demo -e LLM_ADAPTER=demo -e AUTH_ADAPTER=demo -e EMBED_WORKER=false -e JWT_SECRET=ci-secret-for-isolated-container-test-only -e DATABASE_URL=postgresql+psycopg://test:test@db:5432/education_sales education-sales:ci
+      - name: Verify migrations, dashboard and authenticated API
+        run: python scripts/check-cloud.py http://127.0.0.1:10000
+      - name: Show container diagnostics on failure
+        if: failure()
+        run: docker logs education-api
